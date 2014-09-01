@@ -11,11 +11,13 @@ public class EditItemActivity extends Activity {
 	private EditText editText1;
 	private Button button1;
 	private int position;
+	private String oldAction;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_edit_item);
+		oldAction = new String("");
 		
 		editText1 = (EditText) findViewById(R.id.editText1);
 		button1 = (Button) findViewById(R.id.button1);
@@ -25,6 +27,7 @@ public class EditItemActivity extends Activity {
 		String action = getIntent().getStringExtra("action");
 		
 		editText1.setText(action);
+		oldAction = action;
 	}
 
 	@Override
@@ -50,6 +53,7 @@ public class EditItemActivity extends Activity {
 		Intent parent = new Intent();
 		parent.putExtra("action", editText1.getText().toString());
 		parent.putExtra("position", position);
+		parent.putExtra("oldAction", oldAction);
 		setResult (RESULT_OK, parent);
 		//close the activity and return to the mail screen
 		finish();

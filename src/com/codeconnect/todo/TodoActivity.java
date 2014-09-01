@@ -3,12 +3,15 @@ package com.codeconnect.todo;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.io.FileUtils;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.database.sqlite.SQLiteException;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -21,28 +24,31 @@ import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.AdapterView.OnItemClickListener;
 
 public class TodoActivity extends Activity {
-	ArrayList<String> items;
-	ArrayAdapter<String> itemsAdaptor;
+	List<Action> items;
+	ArrayAdapter<Action> itemsAdaptor;
 	ListView lvItems;
 	private final int REQUEST_CODE = 20;
-
+	private DatabaseController dbController;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_todo);
 		
+		dbController = new DatabaseController(this);
+		dbController.open();
+		
 		//get the list view and add the adaptop
 		lvItems = (ListView) findViewById(R.id.lvItems);
-		items = new ArrayList<String>();
 		
 		readItems();
 		//configure the adaptor here
-		itemsAdaptor = new ArrayAdapter<String>(this, 
+		itemsAdaptor = new ArrayAdapter<Action>(this, 
 					android.R.layout.simple_list_item_1,
 					items
 				);
 		lvItems.setAdapter(itemsAdaptor);
-
+		
 		setupListViewListener();
 	}
 
@@ -52,9 +58,9 @@ public class TodoActivity extends Activity {
 			@Override
 			public boolean onItemLongClick ( AdapterView<?> parent, 
 							View view, int position, long rowId){
+				dbController.delete(items.get(position));
 				items.remove(position);
 				itemsAdaptor.notifyDataSetChanged();
-				writeItems();
 				return true;
 			}
 		});
@@ -65,7 +71,7 @@ public class TodoActivity extends Activity {
 				//open the edit window
 				Intent i = new Intent(TodoActivity.this, EditItemActivity.class);
 				i.putExtra("position", position);
-				i.putExtra("action", items.get(position));
+				i.putExtra("action", items.get(position).getAction());
 				//startActivity(i);
 				startActivityForResult(i, REQUEST_CODE);
 			}
@@ -77,10 +83,14 @@ public class TodoActivity extends Activity {
 		if ( requestCode == REQUEST_CODE && resultCode == RESULT_OK){
 			String action = data.getExtras().getString("action");
 			int position = data.getExtras().getInt("position", 0);
-			//Toast.makeText(this, action + position, Toast.LENGTH_SHORT).show();
-			items.set(position, action);
+			String oldAction = data.getExtras().getString("oldAction");
+			
+			items.set(position, new Action(position, action));
 			itemsAdaptor.notifyDataSetChanged();
-			writeItems();
+			
+			Action NewAction = new Action(position, action);
+			Action OldAction = new Action(position, oldAction);
+			int result = dbController.update(OldAction, NewAction);
 		}
 	}
 	
@@ -105,28 +115,13 @@ public class TodoActivity extends Activity {
 	
 	public void addTodoItem(View v){
 		EditText etNewItem = (EditText) findViewById(R.id.etNewItem);
-		itemsAdaptor.add(etNewItem.getText().toString());
+		Action action = new Action(items.size(),  etNewItem.getText().toString());
+		itemsAdaptor.add(action);
 		etNewItem.setText("");
-		writeItems();
+		dbController.insert(action.getAction());
 	}
 	
 	private void readItems(){
-		File filesDir = getFilesDir();
-		File todoFile = new File(filesDir, "todo.txt");
-		try{
-			items = new ArrayList<String>(FileUtils.readLines(todoFile));
-		}catch(IOException e){
-			items = new ArrayList<String>();
-			e.printStackTrace();
-		}
-	}
-	private void writeItems(){
-		File filesDir = getFilesDir();
-		File todoFile = new File (filesDir, "todo.txt");
-		try {
-			FileUtils.writeLines(todoFile, items);
-		}catch(IOException e){
-			e.printStackTrace();
-		}
+			items = (ArrayList<Action>)dbController.getAll();
 	}
 }

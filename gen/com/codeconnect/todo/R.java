@@ -41,6 +41,7 @@ public final class R {
         public static final int todo=0x7f070001;
     }
     public static final class string {
+        public static final int TODOapp=0x7f050005;
         public static final int action_settings=0x7f050002;
         public static final int app_name=0x7f050000;
         public static final int btAdd=0x7f050003;
